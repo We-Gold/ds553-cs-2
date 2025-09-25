@@ -86,3 +86,19 @@ ${COMMAND} "cd ds553-cs-2 && source venv/bin/activate && pip install -r requirem
 ${COMMAND} "nohup ds553-cs-2/venv/bin/python3 ds553-cs-2/app.py > log.txt 2>&1 &"
 
 echo "Deployment complete. You can access the application at http://${MACHINE}:${DEPLOY_PORT}"
+
+echo "Starting server monitoring..."
+
+sleep 5
+
+while true; do
+    # Check if the product is reachable using curl
+    curl -I --max-time 5 http://$MACHINE:$DEPLOY_PORT/ >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "$(date): Server is down. Redeploying..."
+        bash "$0" "$SSH_KEY_NAME"
+    else
+        echo "$(date): Server is active."
+    fi
+    sleep 300  # Wait for 5 minutes
+done
