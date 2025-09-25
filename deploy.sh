@@ -2,6 +2,7 @@
 
 PORT=22003
 DEPLOY_PORT=8003
+GRADIO_PORT=7860
 MACHINE=paffenroth-23.dyn.wpi.edu
 STUDENT_ADMIN_KEY_PATH=$HOME/.ssh
 
@@ -78,6 +79,7 @@ scp -P ${PORT} -o StrictHostKeyChecking=no .env student-admin@${MACHINE}:~/ds553
 
 COMMAND="ssh -i autokey -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE}"
 
+${COMMAND} "lsof -t -i:${GRADIO_PORT} | xargs -r kill" # kill any existing gradio processes
 ${COMMAND} "ls ds553-cs-2"
 ${COMMAND} "sudo apt install -qq -y python3-venv"
 ${COMMAND} "sudo apt install -qq -y ffmpeg"
