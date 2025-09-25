@@ -1,5 +1,7 @@
+-f https://download.pytorch.org/whl/torch_stable.html 
+torch==2.3.0+cpu
+
 transformers
-torch
 gradio[oauth]
 huggingface_hub
 python-dotenv
