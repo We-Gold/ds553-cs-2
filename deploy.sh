@@ -5,6 +5,15 @@ DEPLOY_PORT=8003
 MACHINE=paffenroth-23.dyn.wpi.edu
 STUDENT_ADMIN_KEY_PATH=$HOME/.ssh
 
+# Use the provided key name or default to student-admin_key
+if [ -n "$1" ]; then
+    SSH_KEY_NAME="$1"
+else
+    SSH_KEY_NAME="student-admin_key"
+fi
+
+echo "Using SSH key: ${SSH_KEY_NAME}"
+
 # Clean up from previous runs
 ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[${MACHINE}]:${PORT}"
 
@@ -17,7 +26,7 @@ mkdir tmp
 cp .env tmp
 
 # copy the key to the temporary directory
-cp ${STUDENT_ADMIN_KEY_PATH}/student-admin_key* tmp
+cp ${STUDENT_ADMIN_KEY_PATH}/${SSH_KEY_NAME}* tmp
 
 # Copy public keys to the temporary directory
 cp public_keys tmp
@@ -29,7 +38,7 @@ chmod 700 tmp
 cd tmp
 
 # Set the permissions of the key
-chmod 600 student-admin_key*
+chmod 600 ${SSH_KEY_NAME}*
 
 # Create a unique key
 rm -f autokey*
@@ -39,7 +48,7 @@ ssh-keygen -f autokey -t ed25519 -N ""
 # and insert the user's public keys
 cat autokey.pub > authorized_keys
 cat public_keys >> authorized_keys
-cat student-admin_key.pub >> authorized_keys #TEMPORARY
+# cat ${SSH_KEY_NAME}.pub >> authorized_keys #TEMPORARY
 
 chmod 600 authorized_keys
 
@@ -48,7 +57,7 @@ ls -l authorized_keys
 cat authorized_keys
 
 # Copy the authorized_keys file to the server
-scp -i student-admin_key -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
+scp -i ${SSH_KEY_NAME} -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
 
 # Add the key to the ssh-agent
 eval "$(ssh-agent -s)"
