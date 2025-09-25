@@ -8,6 +8,10 @@ load_dotenv()
 import gradio as gr
 from huggingface_hub import InferenceClient
 
+from typing import Optional
+
+USE_LOCAL_TOKEN = True
+
 LOCAL_AUDIO_FILE = "./input.wav"
 
 
@@ -54,7 +58,7 @@ def build_message_prompt(text, mode):
 
     return messages
 
-def respond(file, mode, hf_token: gr.OAuthToken):
+def respond(file, mode, hf_token: Optional[gr.OAuthToken] = None):
     global pipe
 
     input_sound = load_audio_file(file)
@@ -71,12 +75,17 @@ def respond(file, mode, hf_token: gr.OAuthToken):
 
     messages = build_message_prompt(text_result, mode)
 
-    # Convert text to new style
-    if hf_token is None or not getattr(hf_token, "token", None):
+    if USE_LOCAL_TOKEN:
+        import os
+        hf_token = {}
+        token = os.getenv("HF_TOKEN")
+    elif hf_token is None or not getattr(hf_token, "token", None):
         yield "⚠️ Please log in with your Hugging Face account first."
         return
+    else:
+        token = hf_token.token
     
-    client = InferenceClient(token=hf_token.token, model="openai/gpt-oss-20b")
+    client = InferenceClient(token=token, model="openai/gpt-oss-20b")
 
     response = ""
 
@@ -138,7 +147,8 @@ CSS = """
 with gr.Blocks(css=CSS) as demo:
     with gr.Row():
         gr.Markdown("<h1 style='text-align: center; color: black'> Well-Versed AI </h1>")
-        gr.LoginButton()
+        if not USE_LOCAL_TOKEN:
+            gr.LoginButton()
     with gr.Row():
         mic = gr.Audio(label="🎙️ Microphone or Upload (< 30 seconds)", type="filepath")
     with gr.Row():
