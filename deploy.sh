@@ -85,4 +85,4 @@ ${COMMAND} "cd ds553-cs-2 && python3 -m venv venv"
 ${COMMAND} "cd ds553-cs-2 && source venv/bin/activate && pip install -r requirements.txt"
 ${COMMAND} "nohup ds553-cs-2/venv/bin/python3 ds553-cs-2/app.py > log.txt 2>&1 &"
 
-echo "Deployment complete. You can access the application at https://${MACHINE}:${DEPLOY_PORT}"
+echo "Deployment complete. You can access the application at http://${MACHINE}:${DEPLOY_PORT}"
