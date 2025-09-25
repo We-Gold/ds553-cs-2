@@ -1,6 +1,7 @@
 #! /bin/bash
 
 PORT=22003
+DEPLOY_PORT=8003
 MACHINE=paffenroth-23.dyn.wpi.edu
 STUDENT_ADMIN_KEY_PATH=$HOME/.ssh
 
@@ -11,6 +12,9 @@ rm -rf tmp
 
 # Create a temporary directory
 mkdir tmp
+
+# Copy the .env file to the temporary directory
+cp .env tmp
 
 # copy the key to the temporary directory
 cp ${STUDENT_ADMIN_KEY_PATH}/student-admin_key* tmp
@@ -60,10 +64,16 @@ git clone https://github.com/We-Gold/ds553-cs-2.git
 # Copy the files to the server
 scp -P ${PORT} -o StrictHostKeyChecking=no -r ds553-cs-2 student-admin@${MACHINE}:~/
 
+# Copy the environment variable file to the server
+scp -P ${PORT} -o StrictHostKeyChecking=no .env student-admin@${MACHINE}:~/ds553-cs-2/.env
+
 COMMAND="ssh -i autokey -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE}"
 
 ${COMMAND} "ls ds553-cs-2"
 ${COMMAND} "sudo apt install -qq -y python3-venv"
+${COMMAND} "sudo apt install -qq -y ffmpeg"
 ${COMMAND} "cd ds553-cs-2 && python3 -m venv venv"
 ${COMMAND} "cd ds553-cs-2 && source venv/bin/activate && pip install -r requirements.txt"
 ${COMMAND} "nohup ds553-cs-2/venv/bin/python3 ds553-cs-2/app.py > log.txt 2>&1 &"
+
+echo "Deployment complete. You can access the application at https://${MACHINE}:${DEPLOY_PORT}"
