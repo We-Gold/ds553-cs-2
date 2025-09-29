@@ -84,51 +84,56 @@ echo "checking that the authorized_keys file is correct"
 ls -l authorized_keys
 cat authorized_keys
 
-# Copy the authorized_keys file to the server
-if [ "$USE_DEFAULT_FOR_DEPLOY" = true ]; then
-    scp -i ${DEFAULT_KEY} -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
-else
-    scp -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
-fi
+# Assumes we are in the tmp directory
+deploy_application() {
+    # Copy the authorized_keys file to the server
+    if [ "$USE_DEFAULT_FOR_DEPLOY" = true ]; then
+        scp -i ${DEFAULT_KEY} -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
+    else
+        scp -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
+    fi
 
-# # Check the key file on the server
-echo "checking that the authorized_keys file is correct"
-ssh -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE} "cat ~/.ssh/authorized_keys"
+    # Check the key file on the server
+    echo "checking that the authorized_keys file is correct"
+    ssh -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE} "cat ~/.ssh/authorized_keys"
 
-# clone the repo
-git clone https://github.com/We-Gold/ds553-cs-2.git
+    # Remove the repo from this folder if it exists
+    rm -rf ds553-cs-2
 
-# Copy the files to the server
-scp -P ${PORT} -o StrictHostKeyChecking=no -r ds553-cs-2 student-admin@${MACHINE}:~/
+    # clone the repo
+    git clone https://github.com/We-Gold/ds553-cs-2.git
 
-# Copy the environment variable file to the server
-scp -P ${PORT} -o StrictHostKeyChecking=no .env student-admin@${MACHINE}:~/ds553-cs-2/.env
+    # Copy the files to the server
+    scp -P ${PORT} -o StrictHostKeyChecking=no -r ds553-cs-2 student-admin@${MACHINE}:~/
 
-COMMAND="ssh -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE}"
+    # Copy the environment variable file to the server
+    scp -P ${PORT} -o StrictHostKeyChecking=no .env student-admin@${MACHINE}:~/ds553-cs-2/.env
 
-${COMMAND} "lsof -t -i:${GRADIO_PORT} | xargs -r kill" # kill any existing gradio processes
-${COMMAND} "ls ds553-cs-2"
-${COMMAND} "sudo apt install -qq -y python3-venv"
-${COMMAND} "sudo apt install -qq -y ffmpeg"
-${COMMAND} "cd ds553-cs-2 && python3 -m venv venv"
-${COMMAND} "cd ds553-cs-2 && source venv/bin/activate && pip install -r requirements.txt"
-${COMMAND} "nohup ds553-cs-2/venv/bin/python3 ds553-cs-2/app.py > log.txt 2>&1 &"
+    COMMAND="ssh -p ${PORT} -o StrictHostKeyChecking=no student-admin@${MACHINE}"
 
-echo "Deployment complete. You can access the application at http://${MACHINE}:${DEPLOY_PORT}"
+    ${COMMAND} "lsof -t -i:${GRADIO_PORT} | xargs -r kill" # kill any existing gradio processes
+    ${COMMAND} "ls ds553-cs-2"
+    ${COMMAND} "sudo apt install -qq -y python3-venv"
+    ${COMMAND} "sudo apt install -qq -y ffmpeg"
+    ${COMMAND} "cd ds553-cs-2 && python3 -m venv venv"
+    ${COMMAND} "cd ds553-cs-2 && source venv/bin/activate && pip install -r requirements.txt"
+    ${COMMAND} "nohup ds553-cs-2/venv/bin/python3 ds553-cs-2/app.py > log.txt 2>&1 &"
+
+    echo "Deployment complete. You can access the application at http://${MACHINE}:${DEPLOY_PORT}"
+}
+
+deploy_application
 
 echo "Starting server monitoring..."
 
 sleep 10
-
-# Leave the tmp folder
-cd ..
 
 while true; do
     # Check if the product is reachable using curl
     curl -I --max-time 5 http://$MACHINE:$DEPLOY_PORT/ >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "$(date): Server is down. Redeploying..."
-        bash "$0" "$SSH_KEY_NAME"
+        deploy_application
     else
         echo "$(date): Server is active."
     fi
