@@ -129,13 +129,71 @@ echo "Starting server monitoring..."
 sleep 10
 
 while true; do
+    # Get current time in HH:MM format
+    current_time=$(date +"%H:%M")
+    current_hour=$(date +"%H")
+    current_minute=$(date +"%M")
+    
+    # Define intensive monitoring periods (24-hour format)
+    # Example: 11:59-12:01, 23:59-00:01
+    intensive_periods=(
+        "23:59 00:01"
+    )
+    
+    # Check if we're in an intensive monitoring period
+    in_intensive_period=false
+    for period in "${intensive_periods[@]}"; do
+        start_time=$(echo $period | cut -d' ' -f1)
+        end_time=$(echo $period | cut -d' ' -f2)
+        
+        start_hour=$(echo $start_time | cut -d':' -f1)
+        start_minute=$(echo $start_time | cut -d':' -f2)
+        end_hour=$(echo $end_time | cut -d':' -f1)
+        end_minute=$(echo $end_time | cut -d':' -f2)
+        
+        # Handle midnight crossing (e.g., 23:59-00:01)
+        if [ "$end_hour" -lt "$start_hour" ]; then
+            if [ "$current_hour" -ge "$start_hour" ] || [ "$current_hour" -le "$end_hour" ]; then
+                if ([ "$current_hour" -eq "$start_hour" ] && [ "$current_minute" -ge "$start_minute" ]) || \
+                   ([ "$current_hour" -eq "$end_hour" ] && [ "$current_minute" -le "$end_minute" ]) || \
+                   ([ "$current_hour" -gt "$start_hour" ] || [ "$current_hour" -lt "$end_hour" ]); then
+                    in_intensive_period=true
+                    break
+                fi
+            fi
+        else
+            # Normal time range (no midnight crossing)
+            if [ "$current_hour" -ge "$start_hour" ] && [ "$current_hour" -le "$end_hour" ]; then
+                if ([ "$current_hour" -eq "$start_hour" ] && [ "$current_minute" -ge "$start_minute" ]) && \
+                   ([ "$current_hour" -eq "$end_hour" ] && [ "$current_minute" -le "$end_minute" ]) || \
+                   ([ "$current_hour" -gt "$start_hour" ] && [ "$current_hour" -lt "$end_hour" ]); then
+                    in_intensive_period=true
+                    break
+                fi
+            fi
+        fi
+    done
+    
+    # Set monitoring interval based on time period
+    if [ "$in_intensive_period" = true ]; then
+        monitoring_interval=10  # Check every 10 seconds during intensive periods
+        echo "$(date): Intensive monitoring active - checking every ${monitoring_interval} seconds"
+    else
+        monitoring_interval=300  # Check every 5 minutes normally
+    fi
+    
     # Check if the product is reachable using curl
     curl -I --max-time 5 http://$MACHINE:$DEPLOY_PORT/ >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "$(date): Server is down. Redeploying..."
         deploy_application
     else
-        echo "$(date): Server is active."
+        if [ "$in_intensive_period" = true ]; then
+            echo "$(date): Server is active (intensive monitoring)."
+        else
+            echo "$(date): Server is active."
+        fi
     fi
-    sleep 300  # Wait for 5 minutes
+    
+    sleep $monitoring_interval
 done
