@@ -52,3 +52,9 @@ Then,
 `./run-dev.sh`
 
 You might need to do `chmod +x run-dev.sh`
+
+## Monitoring Scripts
+
+`./deploy.sh -d <your_key>`
+
+`./red-team-script.sh`

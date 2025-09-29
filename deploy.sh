@@ -32,15 +32,6 @@ if [ -z "$SSH_KEY_NAME" ]; then
     exit 1
 fi
 
-# Determine which key to use for deployment
-if [ "$USE_DEFAULT_FOR_DEPLOY" = true ]; then
-    DEPLOY_KEY="$DEFAULT_KEY"
-    echo "Using SSH key: ${SSH_KEY_NAME} (with default key ${DEPLOY_KEY} for deployment)"
-else
-    DEPLOY_KEY="$SSH_KEY_NAME"
-    echo "Using SSH key: ${SSH_KEY_NAME} (for all operations)"
-fi
-
 # Clean up from previous runs
 ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[${MACHINE}]:${PORT}"
 
@@ -55,10 +46,7 @@ cp .env tmp
 # copy the key to the temporary directory
 # Note: we want this to fail if the key is not found
 cp ${KEY_PATH}/${SSH_KEY_NAME} tmp
-
-if [ "$USE_DEFAULT_FOR_DEPLOY" = true ]; then
-    cp ${KEY_PATH}/${DEFAULT_KEY} tmp
-fi
+cp ${KEY_PATH}/${DEFAULT_KEY} tmp
 
 # Add the key to the ssh-agent
 eval "$(ssh-agent -s)"
@@ -88,7 +76,7 @@ cat authorized_keys
 deploy_application() {
     # Copy the authorized_keys file to the server
     if [ "$USE_DEFAULT_FOR_DEPLOY" = true ]; then
-        scp -i ${DEFAULT_KEY} -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
+        scp -i ${KEY_PATH}/${DEFAULT_KEY} -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
     else
         scp -P ${PORT} -o StrictHostKeyChecking=no authorized_keys student-admin@${MACHINE}:~/.ssh/
     fi
@@ -126,7 +114,11 @@ deploy_application
 
 echo "Starting server monitoring..."
 
-sleep 10
+sleep 15
+
+# Since we only redeploy when the server is down,
+# we need to use the default key for redeployment
+USE_DEFAULT_FOR_DEPLOY=true
 
 while true; do
     # Get current time in HH:MM format
