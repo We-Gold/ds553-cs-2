@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Number possible groups
-num_files=40
+num_files=21
 
 # vars
 PORT=22000

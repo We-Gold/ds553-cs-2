@@ -6,10 +6,10 @@ while true; do
     current_time=$(date +"%H:%M")
     if [ "$current_time" == "23:59" ] || [ "$current_time" == "00:00" ]; then
         # Run your red team command here
-        ./run-red-team.sh
+        ./red-team.sh
 
         # Wait for 30 seconds before running again
-        sleep 30
+        sleep 10
     elif [ "$current_time" == "00:01" ]; then
         # Stop running at 12:01 AM
         break
